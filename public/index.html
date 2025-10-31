@@ -49,7 +49,7 @@
 
       <div class="preview" id="preview"></div>
       <div class="ticket-preview">
-        <iframe id="ticketPreviewFrame" title="Previsualización del ticket"></iframe>
+        <iframe id="ticketPreviewFrame" title="Previsualización del ticket" loading="lazy"></iframe>
       </div>
     </div>
 
@@ -144,7 +144,8 @@
           }
           const blob = await resp.blob();
           const url = URL.createObjectURL(blob);
-          ticketPreviewFrame.src = url;
+          // Oculta la barra de herramientas y el panel lateral del visor
+          ticketPreviewFrame.src = url + '#toolbar=0&navpanes=0&view=FitH&page=1';
         } catch (err) {
           statusEl.textContent = 'Falló la previsualización: ' + err.message;
           statusEl.style.color = '#dc3545';
