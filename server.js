@@ -212,6 +212,7 @@ app.post('/print', upload.single('image'), async (req, res) => {
     doc.pipe(stream);
 
     const contentWidth = pageWidth - doc.page.margins.left - doc.page.margins.right;
+    const imageWidth = Math.round(contentWidth * 0.35); // imagen mucho más chica
 
     // Título
     doc.font('Helvetica-Bold').fontSize(18).text(title, { align: 'center', width: contentWidth });
@@ -226,7 +227,7 @@ app.post('/print', upload.single('image'), async (req, res) => {
       try {
         const imgBuffer = await transformImageForThermal(imagePath);
         if (imgBuffer) {
-          doc.image(imgBuffer, { width: contentWidth, align: 'center' });
+          doc.image(imgBuffer, { width: imageWidth, align: 'center' });
           doc.moveDown(0.5);
         }
       } catch (imgErr) {
@@ -295,6 +296,7 @@ app.post('/preview', upload.single('image'), async (req, res) => {
     const pageHeight = 800;
     const doc = new PDFDocument({ size: [pageWidth, pageHeight], margins: { top: 12, bottom: 12, left: 12, right: 12 } });
     const contentWidth = pageWidth - doc.page.margins.left - doc.page.margins.right;
+    const imageWidth = Math.round(contentWidth * 0.35);
 
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
@@ -315,7 +317,7 @@ app.post('/preview', upload.single('image'), async (req, res) => {
       try {
         const imgBuffer = await transformImageForThermal(imagePath);
         if (imgBuffer) {
-          doc.image(imgBuffer, { width: contentWidth, align: 'center' });
+          doc.image(imgBuffer, { width: imageWidth, align: 'center' });
           doc.moveDown(0.5);
         }
       } catch (imgErr) {
