@@ -17,6 +17,8 @@
       .status { margin-top: 16px; min-height: 24px; }
       .preview { margin-top: 12px; }
       .preview img { max-width: 100%; border-radius: 6px; border: 1px solid #eee; }
+      .ticket-preview { margin-top: 16px; border: 1px solid #ccc; border-radius: 6px; overflow: hidden; height: 420px; }
+      .ticket-preview iframe { width: 100%; height: 100%; border: 0; }
     </style>
   </head>
   <body>
@@ -40,11 +42,15 @@
 
         <div class="actions">
           <button type="submit" id="printBtn">Imprimir</button>
+          <button type="button" id="previewBtn" style="background:#6c757d">Previsualizar</button>
         </div>
         <div class="status" id="status"></div>
       </form>
 
       <div class="preview" id="preview"></div>
+      <div class="ticket-preview">
+        <iframe id="ticketPreviewFrame" title="Previsualización del ticket"></iframe>
+      </div>
     </div>
 
     <script>
@@ -54,6 +60,8 @@
       const imageInput = document.getElementById('image');
       const printerSelect = document.getElementById('printer');
       const printBtn = document.getElementById('printBtn');
+      const previewBtn = document.getElementById('previewBtn');
+      const ticketPreviewFrame = document.getElementById('ticketPreviewFrame');
       let apiBase = window.location.origin;
 
       imageInput.addEventListener('change', () => {
@@ -122,6 +130,28 @@
       }
 
       window.addEventListener('DOMContentLoaded', loadPrinters);
+
+      previewBtn.addEventListener('click', async () => {
+        statusEl.textContent = '';
+        previewBtn.disabled = true;
+        try {
+          const fd = new FormData(form);
+          const resp = await fetch(apiBase + '/preview', { method: 'POST', body: fd });
+          const ct = resp.headers.get('content-type') || '';
+          if (!ct.includes('application/pdf')) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || 'No se pudo generar la previsualización');
+          }
+          const blob = await resp.blob();
+          const url = URL.createObjectURL(blob);
+          ticketPreviewFrame.src = url;
+        } catch (err) {
+          statusEl.textContent = 'Falló la previsualización: ' + err.message;
+          statusEl.style.color = '#dc3545';
+        } finally {
+          previewBtn.disabled = false;
+        }
+      });
     </script>
   </body>
   </html>

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { exec } = require('child_process');
+const sharp = require('sharp');
 const multer = require('multer');
 const PDFDocument = require('pdfkit');
 const { print, getPrinters, getDefaultPrinter } = require('pdf-to-printer');
@@ -11,6 +12,8 @@ const app = express();
 
 // Habilitar CORS para permitir peticiones desde otros orígenes (p. ej., Apache)
 app.use(cors());
+// Express 5 ya no admite el comodín '*' en rutas.
+// Para preflight, declaramos OPTIONS sólo en endpoints específicos más abajo.
 
 // Servir archivos estáticos (frontend)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -116,7 +119,29 @@ async function defaultPrinterFallback() {
   return null;
 }
 
+async function transformImageForThermal(imagePath) {
+  try {
+    // Convertir a escala de grises y aplicar umbral para simular salida térmica
+    const buf = await sharp(imagePath)
+      .grayscale()
+      .threshold(180)
+      .png()
+      .toBuffer();
+    return buf;
+  } catch (e) {
+    console.warn('No se pudo transformar imagen, se usará original:', e.message);
+    // Si falla la transformación, devolver el archivo original como buffer
+    try {
+      return await sharp(imagePath).png().toBuffer();
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 // Listar impresoras disponibles y la predeterminada
+// Preflight para /printers
+app.options('/printers', cors());
 app.get('/printers', async (req, res) => {
   try {
     let list = [];
@@ -156,6 +181,8 @@ app.get('/printers', async (req, res) => {
 });
 
 // Endpoint principal para imprimir
+// Preflight para /print
+app.options('/print', cors());
 app.post('/print', upload.single('image'), async (req, res) => {
   try {
     const title = (req.body.title || '').trim();
@@ -194,13 +221,15 @@ app.post('/print', upload.single('image'), async (req, res) => {
     doc.font('Helvetica').fontSize(12).text(description, { align: 'left', width: contentWidth });
     doc.moveDown(0.5);
 
-    // Imagen (si se subió)
+    // Imagen (si se subió) transformada para impresora térmica
     if (imagePath) {
       try {
-        doc.image(imagePath, { width: contentWidth, align: 'center' });
-        doc.moveDown(0.5);
+        const imgBuffer = await transformImageForThermal(imagePath);
+        if (imgBuffer) {
+          doc.image(imgBuffer, { width: contentWidth, align: 'center' });
+          doc.moveDown(0.5);
+        }
       } catch (imgErr) {
-        // Si la imagen no se puede leer, continuar sin ella
         console.warn('No se pudo insertar imagen en el PDF:', imgErr.message);
       }
     }
@@ -246,6 +275,64 @@ app.post('/print', upload.single('image'), async (req, res) => {
   } catch (err) {
     console.error('Error en impresión:', err);
     return res.status(500).json({ ok: false, error: 'Falló la impresión: ' + err.message });
+  }
+});
+
+// Endpoint de previsualización: genera el PDF y lo devuelve en la respuesta
+// Preflight para /preview
+app.options('/preview', cors());
+app.post('/preview', upload.single('image'), async (req, res) => {
+  try {
+    const title = (req.body.title || '').trim();
+    const description = (req.body.description || '').trim();
+    const imagePath = req.file ? req.file.path : null;
+
+    if (!title || !description) {
+      return res.status(400).json({ ok: false, error: 'Título y descripción son requeridos.' });
+    }
+
+    const pageWidth = 226;
+    const pageHeight = 800;
+    const doc = new PDFDocument({ size: [pageWidth, pageHeight], margins: { top: 12, bottom: 12, left: 12, right: 12 } });
+    const contentWidth = pageWidth - doc.page.margins.left - doc.page.margins.right;
+
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');
+      res.send(pdfBuffer);
+    });
+
+    // Contenido
+    doc.font('Helvetica-Bold').fontSize(18).text(title, { align: 'center', width: contentWidth });
+    doc.moveDown(0.5);
+    doc.font('Helvetica').fontSize(12).text(description, { align: 'left', width: contentWidth });
+    doc.moveDown(0.5);
+
+    if (imagePath) {
+      try {
+        const imgBuffer = await transformImageForThermal(imagePath);
+        if (imgBuffer) {
+          doc.image(imgBuffer, { width: contentWidth, align: 'center' });
+          doc.moveDown(0.5);
+        }
+      } catch (imgErr) {
+        console.warn('No se pudo insertar imagen en el PDF de preview:', imgErr.message);
+      }
+    }
+
+    doc.moveDown(0.5);
+    doc.fontSize(10).text('------------------------------', { align: 'center' });
+
+    doc.end();
+
+    // Limpiar imagen temporal
+    if (imagePath) { try { fs.unlinkSync(imagePath); } catch (_) {} }
+  } catch (err) {
+    console.error('Error en preview:', err);
+    return res.status(500).json({ ok: false, error: 'Falló la previsualización: ' + err.message });
   }
 });
 
