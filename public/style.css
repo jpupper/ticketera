@@ -134,6 +134,70 @@ tbody tr:hover {
   font-weight: bold;
 }
 
+/* Estilos para diseño Veladero */
+.ticket-veladero {
+  padding: 16px 12px;
+}
+.ticket-cine-inmersivo {
+  font-size: 9px;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+  color: #000;
+  text-align: left;
+}
+.ticket-logo-veladero { 
+  width: 90%; 
+  height: auto; 
+  margin: 8px auto 12px; 
+  display: block;
+  filter: grayscale(100%) contrast(1.5);
+}
+.ticket-experiencia {
+  font-size: 11px;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+  color: #000;
+  text-align: center;
+}
+.ticket-slogan { 
+  font-size: 24px; 
+  font-weight: bold; 
+  margin: 2px 0;
+  color: #000;
+  line-height: 1.1;
+}
+.ticket-separator-veladero { 
+  font-size: 10px; 
+  margin: 10px 0;
+  color: #555;
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+.ticket-date-veladero, .ticket-time-veladero { 
+  font-size: 12px; 
+  margin: 4px 0;
+  color: #000;
+  font-weight: bold;
+}
+.ticket-label-veladero { 
+  font-weight: bold; 
+  font-size: 13px; 
+  margin: 12px 0 4px;
+  color: #000;
+}
+.ticket-number-veladero { 
+  font-size: 32px; 
+  font-weight: bold; 
+  margin: 4px 0 16px;
+  color: #000;
+}
+.ticket-thanks-veladero { 
+  font-size: 11px; 
+  margin: 8px 0 4px;
+  color: #000;
+  font-weight: bold;
+}
+
 @media (max-width: 900px) {
   .main-wrapper { grid-template-columns: 1fr; }
 }

@@ -274,35 +274,7 @@ app.post('/print', async (req, res) => {
 
     const contentWidth = pageWidth - doc.page.margins.left - doc.page.margins.right;
 
-    // Marco decorativo superior
-    doc.fontSize(10).text('==============================', { align: 'center' });
-    doc.fontSize(10).text('*  *  *  *  *  *  *  *  *  *', { align: 'center' });
-    doc.moveDown(0.8);
-
-    // Logo centrado (usar logo de la ticketeadora seleccionada)
-    const logoPath = path.join(__dirname, 'public', config.logo);
-    if (fs.existsSync(logoPath)) {
-      try {
-        const imgBuffer = await transformImageForThermal(logoPath);
-        if (imgBuffer) {
-          const logoWidth = Math.round(contentWidth * 0.85);
-          const xPosition = doc.page.margins.left + (contentWidth - logoWidth) / 2;
-          doc.image(imgBuffer, xPosition, doc.y, { width: logoWidth });
-          doc.moveDown(8);
-        } else {
-          console.warn('No se pudo procesar logo:', logoPath);
-          doc.moveDown(2);
-        }
-      } catch (imgErr) {
-        console.warn('Error procesando logo:', imgErr.message);
-        doc.moveDown(2);
-      }
-    } else {
-      console.warn('Logo no encontrado en:', logoPath);
-      doc.moveDown(2);
-    }
-
-    // Fecha y hora
+    // Fecha y hora (común para ambos diseños)
     const now = new Date();
     const fecha = now.toLocaleDateString('es-AR', { 
       day: '2-digit', 
@@ -313,25 +285,114 @@ app.post('/print', async (req, res) => {
     const minutos = now.getMinutes().toString().padStart(2, '0');
     const segundos = now.getSeconds().toString().padStart(2, '0');
 
-    doc.font('Helvetica-Bold').fontSize(11).text('==============================', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.font('Helvetica-Bold').fontSize(13).text(`Fecha: ${fecha}`, { align: 'center' });
-    doc.fontSize(13).text(`Hora: ${hora}:${minutos}:${segundos}`, { align: 'center' });
-    doc.moveDown(0.7);
-    doc.font('Helvetica-Bold').fontSize(11).text('==============================', { align: 'center' });
-    doc.moveDown(1);
+    // Diseño según ticketeadora
+    if (ticketeadora === 'veladero') {
+      // ========== DISEÑO VELADERO ==========
+      
+      // Texto "CINE INMERSIVO" arriba a la izquierda
+      doc.font('Helvetica-Bold').fontSize(9).text('CINE INMERSIVO', doc.page.margins.left, doc.y, { 
+        align: 'left',
+        width: contentWidth
+      });
+      doc.moveDown(0.5);
+      
+      // Logo centrado
+      const logoPath = path.join(__dirname, 'public', config.logo);
+      if (fs.existsSync(logoPath)) {
+        try {
+          const imgBuffer = await transformImageForThermal(logoPath);
+          if (imgBuffer) {
+            const logoWidth = Math.round(contentWidth * 0.90);
+            const xPosition = doc.page.margins.left + (contentWidth - logoWidth) / 2;
+            doc.image(imgBuffer, xPosition, doc.y, { width: logoWidth });
+            doc.moveDown(6);
+          }
+        } catch (imgErr) {
+          console.warn('Error procesando logo:', imgErr.message);
+          doc.moveDown(2);
+        }
+      }
 
-    // Número de participante
-    doc.font('Helvetica-Bold').fontSize(14).text('PARTICIPANTE', { align: 'center' });
-    doc.moveDown(0.3);
-    doc.font('Helvetica-Bold').fontSize(36).text(`#${participant.number}`, { align: 'center' });
-    doc.moveDown(1);
+      // Texto "VIVI LA EXPERIENCIA" (pequeño)
+      doc.font('Helvetica-Bold').fontSize(11).text('VIVI LA EXPERIENCIA', { align: 'center' });
+      doc.moveDown(0.8);
 
-    // Marco decorativo inferior
-    doc.fontSize(10).text('*  *  *  *  *  *  *  *  *  *', { align: 'center' });
-    doc.fontSize(10).text('==============================', { align: 'center' });
-    doc.moveDown(0.8);
-    doc.font('Helvetica-Bold').fontSize(11).text('GRACIAS POR PARTICIPAR', { align: 'center' });
+      // Texto principal "un futuro más brillante" (grande)
+      doc.font('Helvetica-Bold').fontSize(24).text('un futuro', { align: 'center' });
+      doc.fontSize(24).text('más', { align: 'center' });
+      doc.fontSize(24).text('brillante', { align: 'center' });
+      doc.moveDown(1.5);
+
+      // Separador ondulado
+      doc.font('Helvetica').fontSize(10).text('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~', { align: 'center' });
+      doc.moveDown(0.5);
+
+      // Fecha y hora
+      doc.font('Helvetica-Bold').fontSize(12).text(`Fecha: ${fecha}`, { align: 'center' });
+      doc.fontSize(12).text(`Hora: ${hora}:${minutos}:${segundos}`, { align: 'center' });
+      doc.moveDown(0.5);
+      doc.font('Helvetica').fontSize(10).text('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~', { align: 'center' });
+      doc.moveDown(1);
+
+      // Número de participante
+      doc.font('Helvetica-Bold').fontSize(13).text('PARTICIPANTE', { align: 'center' });
+      doc.moveDown(0.3);
+      doc.font('Helvetica-Bold').fontSize(32).text(`#${participant.number}`, { align: 'center' });
+      doc.moveDown(1.2);
+
+      // Mensaje final
+      doc.font('Helvetica-Bold').fontSize(11).text('GRACIAS POR PARTICIPAR', { align: 'center' });
+
+    } else {
+      // ========== DISEÑO DEFAULT (Ticketeadora 1) ==========
+      
+      // Marco decorativo superior
+      doc.fontSize(10).text('==============================', { align: 'center' });
+      doc.fontSize(10).text('*  *  *  *  *  *  *  *  *  *', { align: 'center' });
+      doc.moveDown(0.8);
+
+      // Logo centrado
+      const logoPath = path.join(__dirname, 'public', config.logo);
+      if (fs.existsSync(logoPath)) {
+        try {
+          const imgBuffer = await transformImageForThermal(logoPath);
+          if (imgBuffer) {
+            const logoWidth = Math.round(contentWidth * 0.85);
+            const xPosition = doc.page.margins.left + (contentWidth - logoWidth) / 2;
+            doc.image(imgBuffer, xPosition, doc.y, { width: logoWidth });
+            doc.moveDown(8);
+          } else {
+            doc.moveDown(2);
+          }
+        } catch (imgErr) {
+          console.warn('Error procesando logo:', imgErr.message);
+          doc.moveDown(2);
+        }
+      } else {
+        doc.moveDown(2);
+      }
+
+      // Fecha y hora
+      doc.font('Helvetica-Bold').fontSize(11).text('==============================', { align: 'center' });
+      doc.moveDown(0.5);
+      doc.font('Helvetica-Bold').fontSize(13).text(`Fecha: ${fecha}`, { align: 'center' });
+      doc.fontSize(13).text(`Hora: ${hora}:${minutos}:${segundos}`, { align: 'center' });
+      doc.moveDown(0.7);
+      doc.font('Helvetica-Bold').fontSize(11).text('==============================', { align: 'center' });
+      doc.moveDown(1);
+
+      // Número de participante
+      doc.font('Helvetica-Bold').fontSize(14).text('PARTICIPANTE', { align: 'center' });
+      doc.moveDown(0.3);
+      doc.font('Helvetica-Bold').fontSize(36).text(`#${participant.number}`, { align: 'center' });
+      doc.moveDown(1);
+
+      // Marco decorativo inferior
+      doc.fontSize(10).text('*  *  *  *  *  *  *  *  *  *', { align: 'center' });
+      doc.fontSize(10).text('==============================', { align: 'center' });
+      doc.moveDown(0.8);
+      doc.font('Helvetica-Bold').fontSize(11).text('GRACIAS POR PARTICIPAR', { align: 'center' });
+    }
 
     doc.end();
 

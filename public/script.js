@@ -8,6 +8,11 @@ const previewDate = document.getElementById('previewDate');
 const previewTime = document.getElementById('previewTime');
 const previewNumber = document.getElementById('previewNumber');
 const previewLogo = document.getElementById('previewLogo');
+const previewDefault = document.getElementById('previewDefault');
+const previewVeladero = document.getElementById('previewVeladero');
+const previewDateVeladero = document.getElementById('previewDateVeladero');
+const previewTimeVeladero = document.getElementById('previewTimeVeladero');
+const previewNumberVeladero = document.getElementById('previewNumberVeladero');
 const nextNumber = document.getElementById('nextNumber');
 const historyBody = document.getElementById('historyBody');
 const totalCount = document.getElementById('totalCount');
@@ -25,8 +30,13 @@ function updatePreview() {
   const minutos = now.getMinutes().toString().padStart(2, '0');
   const segundos = now.getSeconds().toString().padStart(2, '0');
   
+  // Actualizar preview default
   previewDate.textContent = fecha;
   previewTime.textContent = `${hora}:${minutos}:${segundos}`;
+  
+  // Actualizar preview veladero
+  previewDateVeladero.textContent = fecha;
+  previewTimeVeladero.textContent = `${hora}:${minutos}:${segundos}`;
 }
 
 // Actualizar preview cada segundo
@@ -50,8 +60,10 @@ async function generateTicket() {
     }
     statusEl.textContent = `¡Ticket #${data.participantNumber} generado!`;
     statusEl.style.color = '#198754';
-    previewNumber.textContent = data.participantNumber + 1;
-    nextNumber.textContent = (data.participantNumber + 1).toString();
+    const nextNum = data.participantNumber + 1;
+    previewNumber.textContent = nextNum;
+    previewNumberVeladero.textContent = nextNum;
+    nextNumber.textContent = nextNum.toString();
     await loadHistory();
   } catch (err) {
     statusEl.textContent = 'Falló la impresión: ' + err.message;
@@ -123,6 +135,7 @@ async function resetCounter() {
     statusEl.style.color = '#198754';
     nextNumber.textContent = '1';
     previewNumber.textContent = '1';
+    previewNumberVeladero.textContent = '1';
     await loadHistory();
   } catch (err) {
     statusEl.textContent = 'Falló el reinicio: ' + err.message;
@@ -147,7 +160,10 @@ async function loadHistory() {
     
     const history = data.history || [];
     totalCount.textContent = history.length;
-    nextNumber.textContent = (data.lastNumber + 1).toString();
+    const nextNum = (data.lastNumber + 1).toString();
+    nextNumber.textContent = nextNum;
+    previewNumber.textContent = nextNum;
+    previewNumberVeladero.textContent = nextNum;
     
     if (history.length === 0) {
       historyBody.innerHTML = '<tr><td colspan="3" class="no-data">No hay registros aún</td></tr>';
@@ -191,10 +207,16 @@ async function loadTicketeadoras() {
 // Función para cambiar ticketeadora
 function onTicketeadoraChange() {
   const ticketeadora = ticketeadoraSelect.value;
-  const config = ticketeadoras[ticketeadora];
-  if (config) {
-    previewLogo.src = config.logo;
+  
+  // Mostrar el preview correcto
+  if (ticketeadora === 'veladero') {
+    previewDefault.style.display = 'none';
+    previewVeladero.style.display = 'block';
+  } else {
+    previewDefault.style.display = 'block';
+    previewVeladero.style.display = 'none';
   }
+  
   loadHistory();
 }
 

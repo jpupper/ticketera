@@ -38,7 +38,9 @@
 
       <div class="preview-container">
         <h2>Vista Previa del Ticket</h2>
-        <div class="ticket-mock">
+        
+        <!-- Preview Default -->
+        <div class="ticket-mock" id="previewDefault">
           <div class="ticket-border-top">==============================</div>
           <div class="ticket-stars">*  *  *  *  *  *  *  *  *  *</div>
           <img id="previewLogo" src="logo.png" alt="Logo" class="ticket-logo">
@@ -51,6 +53,23 @@
           <div class="ticket-stars">*  *  *  *  *  *  *  *  *  *</div>
           <div class="ticket-border-bottom">==============================</div>
           <div class="ticket-thanks">GRACIAS POR PARTICIPAR</div>
+        </div>
+
+        <!-- Preview Veladero -->
+        <div class="ticket-mock ticket-veladero" id="previewVeladero" style="display: none;">
+          <div class="ticket-cine-inmersivo">CINE INMERSIVO</div>
+          <img id="previewLogoVeladero" src="veladerologo2.png" alt="Logo Veladero" class="ticket-logo-veladero">
+          <div class="ticket-experiencia">VIVI LA EXPERIENCIA</div>
+          <div class="ticket-slogan">un futuro</div>
+          <div class="ticket-slogan">más</div>
+          <div class="ticket-slogan">brillante</div>
+          <div class="ticket-separator-veladero">~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~</div>
+          <div class="ticket-date-veladero">Fecha: <span id="previewDateVeladero">--/--/----</span></div>
+          <div class="ticket-time-veladero">Hora: <span id="previewTimeVeladero">--:--:--</span></div>
+          <div class="ticket-separator-veladero">~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~</div>
+          <div class="ticket-label-veladero">PARTICIPANTE</div>
+          <div class="ticket-number-veladero">#<span id="previewNumberVeladero">1</span></div>
+          <div class="ticket-thanks-veladero">GRACIAS POR PARTICIPAR</div>
         </div>
       </div>
     </div>
