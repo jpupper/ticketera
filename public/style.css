@@ -22,34 +22,56 @@ button:disabled { background: #9bb9ff; cursor: not-allowed; }
   font-family: 'Courier New', monospace;
   text-align: center;
 }
+.ticket-border-top, .ticket-border-bottom { 
+  font-size: 10px; 
+  margin: 4px 0;
+  color: #333;
+  font-family: monospace;
+}
+.ticket-stars { 
+  font-size: 10px; 
+  margin: 6px 0;
+  color: #555;
+  font-family: monospace;
+}
 .ticket-logo { 
-  width: 70%; 
+  width: 85%; 
   height: auto; 
-  margin: 0 auto 12px; 
+  margin: 12px auto 24px; 
   display: block;
   filter: grayscale(100%) contrast(1.5);
 }
-.ticket-date, .ticket-time { 
-  font-size: 11px; 
-  margin: 4px 0;
-  color: #333;
-}
 .ticket-separator { 
-  font-size: 10px; 
+  font-size: 11px; 
   margin: 8px 0;
-  color: #666;
+  color: #333;
+  font-family: monospace;
+  font-weight: bold;
+}
+.ticket-date, .ticket-time { 
+  font-size: 13px; 
+  margin: 5px 0;
+  color: #000;
+  font-weight: bold;
 }
 .ticket-label { 
   font-weight: bold; 
   font-size: 14px; 
-  margin: 8px 0 4px;
+  margin: 12px 0 4px;
   color: #000;
+  letter-spacing: 1px;
 }
 .ticket-number { 
-  font-size: 24px; 
+  font-size: 36px; 
   font-weight: bold; 
-  margin: 4px 0 8px;
+  margin: 4px 0 12px;
   color: #000;
+}
+.ticket-thanks { 
+  font-size: 11px; 
+  margin: 10px 0 4px;
+  color: #000;
+  font-weight: bold;
 }
 
 @media (max-width: 900px) {

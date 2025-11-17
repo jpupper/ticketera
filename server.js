@@ -219,7 +219,7 @@ app.post('/print', async (req, res) => {
 
     // Crear el PDF con ancho aproximado de rollo 80mm (226pt)
     const pageWidth = 226;
-    const pageHeight = 400;
+    const pageHeight = 500;
 
     const doc = new PDFDocument({
       size: [pageWidth, pageHeight],
@@ -231,15 +231,21 @@ app.post('/print', async (req, res) => {
 
     const contentWidth = pageWidth - doc.page.margins.left - doc.page.margins.right;
 
-    // Logo
+    // Marco decorativo superior
+    doc.fontSize(10).text('==============================', { align: 'center' });
+    doc.fontSize(10).text('*  *  *  *  *  *  *  *  *  *', { align: 'center' });
+    doc.moveDown(0.8);
+
+    // Logo centrado
     const logoPath = path.join(__dirname, 'public', 'logo.png');
     if (fs.existsSync(logoPath)) {
       try {
         const imgBuffer = await transformImageForThermal(logoPath);
         if (imgBuffer) {
-          const logoWidth = Math.round(contentWidth * 0.7);
-          doc.image(imgBuffer, { width: logoWidth, align: 'center' });
-          doc.moveDown(1);
+          const logoWidth = Math.round(contentWidth * 0.85);
+          const xPosition = doc.page.margins.left + (contentWidth - logoWidth) / 2;
+          doc.image(imgBuffer, xPosition, doc.y, { width: logoWidth });
+          doc.moveDown(8);
         }
       } catch (imgErr) {
         console.warn('No se pudo insertar logo:', imgErr.message);
@@ -259,21 +265,25 @@ app.post('/print', async (req, res) => {
     const minutos = now.getMinutes().toString().padStart(2, '0');
     const segundos = now.getSeconds().toString().padStart(2, '0');
 
-    doc.font('Helvetica').fontSize(11).text(`Fecha: ${fecha}`, { align: 'center' });
-    doc.fontSize(11).text(`Hora: ${hora}:${minutos}:${segundos}`, { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(11).text('==============================', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.font('Helvetica-Bold').fontSize(13).text(`Fecha: ${fecha}`, { align: 'center' });
+    doc.fontSize(13).text(`Hora: ${hora}:${minutos}:${segundos}`, { align: 'center' });
+    doc.moveDown(0.7);
+    doc.font('Helvetica-Bold').fontSize(11).text('==============================', { align: 'center' });
     doc.moveDown(1);
 
-    // Separador
-    doc.fontSize(10).text('------------------------------', { align: 'center' });
-    doc.moveDown(0.5);
-
     // Número de participante
-    doc.font('Helvetica-Bold').fontSize(14).text('Nro de participante:', { align: 'center' });
-    doc.fontSize(24).text(participant.number.toString(), { align: 'center' });
-    doc.moveDown(0.5);
+    doc.font('Helvetica-Bold').fontSize(14).text('PARTICIPANTE', { align: 'center' });
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Bold').fontSize(36).text(`#${participant.number}`, { align: 'center' });
+    doc.moveDown(1);
 
-    // Separador final
-    doc.fontSize(10).text('------------------------------', { align: 'center' });
+    // Marco decorativo inferior
+    doc.fontSize(10).text('*  *  *  *  *  *  *  *  *  *', { align: 'center' });
+    doc.fontSize(10).text('==============================', { align: 'center' });
+    doc.moveDown(0.8);
+    doc.font('Helvetica-Bold').fontSize(11).text('GRACIAS POR PARTICIPAR', { align: 'center' });
 
     doc.end();
 
