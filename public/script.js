@@ -1,9 +1,14 @@
    const statusEl = document.getElementById('status');
 const printerSelect = document.getElementById('printer');
 const printBtn = document.getElementById('printBtn');
+const resetBtn = document.getElementById('resetBtn');
+const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
 const previewDate = document.getElementById('previewDate');
 const previewTime = document.getElementById('previewTime');
 const previewNumber = document.getElementById('previewNumber');
+const nextNumber = document.getElementById('nextNumber');
+const historyBody = document.getElementById('historyBody');
+const totalCount = document.getElementById('totalCount');
 let apiBase = window.location.origin;
 
 function updatePreview() {
@@ -42,6 +47,8 @@ async function generateTicket() {
     statusEl.textContent = `¡Ticket #${data.participantNumber} generado!`;
     statusEl.style.color = '#198754';
     previewNumber.textContent = data.participantNumber + 1;
+    nextNumber.textContent = (data.participantNumber + 1).toString();
+    await loadHistory();
   } catch (err) {
     statusEl.textContent = 'Falló la impresión: ' + err.message;
     statusEl.style.color = '#dc3545';
@@ -89,4 +96,75 @@ async function loadPrinters() {
   }
 }
 
-window.addEventListener('DOMContentLoaded', loadPrinters);
+// Función para reiniciar el contador
+async function resetCounter() {
+  if (!confirm('¿Estás seguro de reiniciar el contador a 0? El historial se mantendrá.')) {
+    return;
+  }
+  
+  statusEl.textContent = '';
+  resetBtn.disabled = true;
+  try {
+    const resp = await fetch(apiBase + '/reset', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      throw new Error(data.error || 'Error al reiniciar');
+    }
+    statusEl.textContent = 'Contador reiniciado exitosamente';
+    statusEl.style.color = '#198754';
+    nextNumber.textContent = '1';
+    previewNumber.textContent = '1';
+    await loadHistory();
+  } catch (err) {
+    statusEl.textContent = 'Falló el reinicio: ' + err.message;
+    statusEl.style.color = '#dc3545';
+  } finally {
+    resetBtn.disabled = false;
+  }
+}
+
+// Función para cargar el historial
+async function loadHistory() {
+  try {
+    let resp = await fetch(apiBase + '/history');
+    let ct = resp.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      resp = await fetch('http://localhost:5450/history');
+      ct = resp.headers.get('content-type') || '';
+    }
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) throw new Error(data.error || 'No se pudo cargar historial');
+    
+    const history = data.history || [];
+    totalCount.textContent = history.length;
+    nextNumber.textContent = (data.lastNumber + 1).toString();
+    
+    if (history.length === 0) {
+      historyBody.innerHTML = '<tr><td colspan="3" class="no-data">No hay registros aún</td></tr>';
+      return;
+    }
+    
+    // Mostrar en orden inverso (más reciente primero)
+    historyBody.innerHTML = history.reverse().map(item => `
+      <tr>
+        <td><strong>#${item.number}</strong></td>
+        <td>${item.date}</td>
+        <td>${item.time}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    historyBody.innerHTML = '<tr><td colspan="3" class="no-data">Error al cargar historial</td></tr>';
+    console.error('Error cargando historial:', err);
+  }
+}
+
+resetBtn.addEventListener('click', resetCounter);
+refreshHistoryBtn.addEventListener('click', loadHistory);
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadPrinters();
+  loadHistory();
+});

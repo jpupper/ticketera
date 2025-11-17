@@ -20,9 +20,14 @@
         </select>
 
         <button type="button" id="printBtn">Generar Ticket</button>
+        <button type="button" id="resetBtn" class="btn-secondary">Reiniciar Contador</button>
         
         <div class="status" id="status"></div>
         <div class="hint">Presiona la tecla <strong>U</strong> para generar un ticket rápidamente</div>
+        
+        <div class="current-counter">
+          <strong>Próximo número:</strong> <span id="nextNumber">1</span>
+        </div>
       </div>
 
       <div class="preview-container">
@@ -41,6 +46,30 @@
           <div class="ticket-border-bottom">==============================</div>
           <div class="ticket-thanks">GRACIAS POR PARTICIPAR</div>
         </div>
+      </div>
+    </div>
+
+    <div class="history-section">
+      <h2>Historial de Participantes</h2>
+      <div class="history-controls">
+        <button type="button" id="refreshHistoryBtn" class="btn-small">Actualizar</button>
+        <span class="total-count">Total: <strong id="totalCount">0</strong></span>
+      </div>
+      <div class="history-container">
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fecha</th>
+              <th>Hora</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr>
+              <td colspan="3" class="no-data">Cargando...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 

@@ -328,6 +328,35 @@ app.post('/print', async (req, res) => {
   }
 });
 
+// Endpoint para reiniciar el contador de participantes
+app.options('/reset', cors());
+app.post('/reset', async (req, res) => {
+  try {
+    const data = getParticipantsData();
+    data.lastNumber = 0;
+    saveParticipantsData(data);
+    return res.json({ ok: true, message: 'Contador reiniciado a 0' });
+  } catch (err) {
+    console.error('Error al reiniciar contador:', err);
+    return res.status(500).json({ ok: false, error: 'Falló el reinicio: ' + err.message });
+  }
+});
+
+// Endpoint para obtener el historial de participantes
+app.options('/history', cors());
+app.get('/history', async (req, res) => {
+  try {
+    const data = getParticipantsData();
+    return res.json({ 
+      ok: true, 
+      lastNumber: data.lastNumber,
+      history: data.history || [] 
+    });
+  } catch (err) {
+    console.error('Error al obtener historial:', err);
+    return res.status(500).json({ ok: false, error: 'Falló obtener historial: ' + err.message });
+  }
+});
 
 const PORT = process.env.PORT || 5450;
 app.listen(PORT, () => {
