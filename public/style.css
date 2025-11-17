@@ -1,0 +1,57 @@
+      body { font-family: system-ui, Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 20px; }
+.main-wrapper { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 400px 1fr; gap: 24px; align-items: start; }
+.container { background: #fff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); text-align: center; }
+.preview-container { background: #fff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+h1 { margin-top: 0; font-size: 24px; color: #333; margin-bottom: 24px; }
+h2 { margin-top: 0; font-size: 18px; color: #555; margin-bottom: 20px; text-align: center; }
+label { display: block; font-weight: 600; margin-bottom: 8px; text-align: left; color: #555; }
+select { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 24px; }
+button { cursor: pointer; padding: 14px 24px; border: none; border-radius: 8px; background: #0d6efd; color: white; font-weight: 600; font-size: 16px; width: 100%; transition: background 0.3s; }
+button:hover { background: #0b5ed7; }
+button:disabled { background: #9bb9ff; cursor: not-allowed; }
+.status { margin-top: 16px; min-height: 24px; font-weight: 500; }
+.hint { margin-top: 16px; font-size: 13px; color: #777; }
+
+.ticket-mock { 
+  width: 226px; 
+  margin: 0 auto; 
+  padding: 12px; 
+  background: #fff; 
+  border: 2px solid #ddd; 
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+}
+.ticket-logo { 
+  width: 70%; 
+  height: auto; 
+  margin: 0 auto 12px; 
+  display: block;
+  filter: grayscale(100%) contrast(1.5);
+}
+.ticket-date, .ticket-time { 
+  font-size: 11px; 
+  margin: 4px 0;
+  color: #333;
+}
+.ticket-separator { 
+  font-size: 10px; 
+  margin: 8px 0;
+  color: #666;
+}
+.ticket-label { 
+  font-weight: bold; 
+  font-size: 14px; 
+  margin: 8px 0 4px;
+  color: #000;
+}
+.ticket-number { 
+  font-size: 24px; 
+  font-weight: bold; 
+  margin: 4px 0 8px;
+  color: #000;
+}
+
+@media (max-width: 900px) {
+  .main-wrapper { grid-template-columns: 1fr; }
+}

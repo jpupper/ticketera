@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const { exec } = require('child_process');
 const sharp = require('sharp');
-const multer = require('multer');
 const PDFDocument = require('pdfkit');
 const { print, getPrinters, getDefaultPrinter } = require('pdf-to-printer');
 const path = require('path');
@@ -17,20 +16,44 @@ app.use(cors());
 
 // Servir archivos estáticos (frontend)
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
 
-// Configurar almacenamiento de imágenes con multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'uploads');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.png';
-    cb(null, `imagen-${Date.now()}${ext}`);
+// Archivo JSON para tracking de participantes
+const participantsFile = path.join(__dirname, 'participants.json');
+
+// Inicializar archivo de participantes si no existe
+if (!fs.existsSync(participantsFile)) {
+  fs.writeFileSync(participantsFile, JSON.stringify({ lastNumber: 0, history: [] }, null, 2));
+}
+
+// Funciones para manejar participantes
+function getParticipantsData() {
+  try {
+    const data = fs.readFileSync(participantsFile, 'utf8');
+    return JSON.parse(data);
+  } catch (e) {
+    return { lastNumber: 0, history: [] };
   }
-});
-const upload = multer({ storage });
+}
+
+function saveParticipantsData(data) {
+  fs.writeFileSync(participantsFile, JSON.stringify(data, null, 2));
+}
+
+function getNextParticipantNumber() {
+  const data = getParticipantsData();
+  data.lastNumber += 1;
+  const now = new Date();
+  const participantInfo = {
+    number: data.lastNumber,
+    date: now.toLocaleDateString('es-AR'),
+    time: now.toLocaleTimeString('es-AR'),
+    timestamp: now.toISOString()
+  };
+  data.history.push(participantInfo);
+  saveParticipantsData(data);
+  return participantInfo;
+}
 
 // Utilidad para resolver el nombre de la impresora desde diferentes formatos
 function resolvePrinterName(p) {
@@ -181,18 +204,13 @@ app.get('/printers', async (req, res) => {
 });
 
 // Endpoint principal para imprimir
-// Preflight para /print
 app.options('/print', cors());
-app.post('/print', upload.single('image'), async (req, res) => {
+app.post('/print', async (req, res) => {
   try {
-    const title = (req.body.title || '').trim();
-    const description = (req.body.description || '').trim();
-    const imagePath = req.file ? req.file.path : null;
     const selectedPrinter = (req.body.printer || '').trim();
 
-    if (!title || !description) {
-      return res.status(400).json({ ok: false, error: 'Título y descripción son requeridos.' });
-    }
+    // Obtener siguiente número de participante
+    const participant = getNextParticipantNumber();
 
     // Preparar carpeta temporal para el PDF
     const tmpDir = path.join(__dirname, 'tmp');
@@ -200,8 +218,8 @@ app.post('/print', upload.single('image'), async (req, res) => {
     const pdfPath = path.join(tmpDir, `ticket-${Date.now()}.pdf`);
 
     // Crear el PDF con ancho aproximado de rollo 80mm (226pt)
-    const pageWidth = 226; // puntos
-    const pageHeight = 800; // altura amplia para evitar cortes
+    const pageWidth = 226;
+    const pageHeight = 400;
 
     const doc = new PDFDocument({
       size: [pageWidth, pageHeight],
@@ -212,31 +230,49 @@ app.post('/print', upload.single('image'), async (req, res) => {
     doc.pipe(stream);
 
     const contentWidth = pageWidth - doc.page.margins.left - doc.page.margins.right;
-    const imageWidth = Math.round(contentWidth * 0.35); // imagen mucho más chica
 
-    // Título
-    doc.font('Helvetica-Bold').fontSize(18).text(title, { align: 'center', width: contentWidth });
-    doc.moveDown(0.5);
-
-    // Descripción
-    doc.font('Helvetica').fontSize(12).text(description, { align: 'left', width: contentWidth });
-    doc.moveDown(0.5);
-
-    // Imagen (si se subió) transformada para impresora térmica
-    if (imagePath) {
+    // Logo
+    const logoPath = path.join(__dirname, 'public', 'logo.png');
+    if (fs.existsSync(logoPath)) {
       try {
-        const imgBuffer = await transformImageForThermal(imagePath);
+        const imgBuffer = await transformImageForThermal(logoPath);
         if (imgBuffer) {
-          doc.image(imgBuffer, { width: imageWidth, align: 'center' });
-          doc.moveDown(0.5);
+          const logoWidth = Math.round(contentWidth * 0.7);
+          doc.image(imgBuffer, { width: logoWidth, align: 'center' });
+          doc.moveDown(1);
         }
       } catch (imgErr) {
-        console.warn('No se pudo insertar imagen en el PDF:', imgErr.message);
+        console.warn('No se pudo insertar logo:', imgErr.message);
       }
+    } else {
+      console.warn('Logo no encontrado en:', logoPath);
     }
 
-    // Separador opcional
+    // Fecha y hora
+    const now = new Date();
+    const fecha = now.toLocaleDateString('es-AR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
+    const hora = now.getHours().toString().padStart(2, '0');
+    const minutos = now.getMinutes().toString().padStart(2, '0');
+    const segundos = now.getSeconds().toString().padStart(2, '0');
+
+    doc.font('Helvetica').fontSize(11).text(`Fecha: ${fecha}`, { align: 'center' });
+    doc.fontSize(11).text(`Hora: ${hora}:${minutos}:${segundos}`, { align: 'center' });
+    doc.moveDown(1);
+
+    // Separador
+    doc.fontSize(10).text('------------------------------', { align: 'center' });
     doc.moveDown(0.5);
+
+    // Número de participante
+    doc.font('Helvetica-Bold').fontSize(14).text('Nro de participante:', { align: 'center' });
+    doc.fontSize(24).text(participant.number.toString(), { align: 'center' });
+    doc.moveDown(0.5);
+
+    // Separador final
     doc.fontSize(10).text('------------------------------', { align: 'center' });
 
     doc.end();
@@ -268,75 +304,20 @@ app.post('/print', upload.single('image'), async (req, res) => {
 
     await print(pdfPath, printOptions);
 
-    // Eliminar archivos temporales
+    // Eliminar archivo temporal
     try { fs.unlinkSync(pdfPath); } catch {}
-    if (imagePath) { try { fs.unlinkSync(imagePath); } catch {} }
 
-    return res.json({ ok: true, message: 'Ticket enviado a impresión.' });
+    return res.json({ 
+      ok: true, 
+      message: 'Ticket enviado a impresión.',
+      participantNumber: participant.number
+    });
   } catch (err) {
     console.error('Error en impresión:', err);
     return res.status(500).json({ ok: false, error: 'Falló la impresión: ' + err.message });
   }
 });
 
-// Endpoint de previsualización: genera el PDF y lo devuelve en la respuesta
-// Preflight para /preview
-app.options('/preview', cors());
-app.post('/preview', upload.single('image'), async (req, res) => {
-  try {
-    const title = (req.body.title || '').trim();
-    const description = (req.body.description || '').trim();
-    const imagePath = req.file ? req.file.path : null;
-
-    if (!title || !description) {
-      return res.status(400).json({ ok: false, error: 'Título y descripción son requeridos.' });
-    }
-
-    const pageWidth = 226;
-    const pageHeight = 800;
-    const doc = new PDFDocument({ size: [pageWidth, pageHeight], margins: { top: 12, bottom: 12, left: 12, right: 12 } });
-    const contentWidth = pageWidth - doc.page.margins.left - doc.page.margins.right;
-    const imageWidth = Math.round(contentWidth * 0.35);
-
-    const chunks = [];
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('end', () => {
-      const pdfBuffer = Buffer.concat(chunks);
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');
-      res.send(pdfBuffer);
-    });
-
-    // Contenido
-    doc.font('Helvetica-Bold').fontSize(18).text(title, { align: 'center', width: contentWidth });
-    doc.moveDown(0.5);
-    doc.font('Helvetica').fontSize(12).text(description, { align: 'left', width: contentWidth });
-    doc.moveDown(0.5);
-
-    if (imagePath) {
-      try {
-        const imgBuffer = await transformImageForThermal(imagePath);
-        if (imgBuffer) {
-          doc.image(imgBuffer, { width: imageWidth, align: 'center' });
-          doc.moveDown(0.5);
-        }
-      } catch (imgErr) {
-        console.warn('No se pudo insertar imagen en el PDF de preview:', imgErr.message);
-      }
-    }
-
-    doc.moveDown(0.5);
-    doc.fontSize(10).text('------------------------------', { align: 'center' });
-
-    doc.end();
-
-    // Limpiar imagen temporal
-    if (imagePath) { try { fs.unlinkSync(imagePath); } catch (_) {} }
-  } catch (err) {
-    console.error('Error en preview:', err);
-    return res.status(500).json({ ok: false, error: 'Falló la previsualización: ' + err.message });
-  }
-});
 
 const PORT = process.env.PORT || 5450;
 app.listen(PORT, () => {
