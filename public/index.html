@@ -14,6 +14,12 @@
       <div class="container">
         <h1>Generador de Tickets</h1>
 
+        <label for="ticketeadora">Seleccionar Ticketeadora</label>
+        <select id="ticketeadora" name="ticketeadora">
+          <option value="default">Ticketeadora 1</option>
+          <option value="veladero">Veladero</option>
+        </select>
+
         <label for="printer">Seleccionar Impresora</label>
         <select id="printer" name="printer">
           <option value="">Predeterminada del sistema</option>
@@ -35,7 +41,7 @@
         <div class="ticket-mock">
           <div class="ticket-border-top">==============================</div>
           <div class="ticket-stars">*  *  *  *  *  *  *  *  *  *</div>
-          <img src="logo.png" alt="Logo" class="ticket-logo">
+          <img id="previewLogo" src="logo.png" alt="Logo" class="ticket-logo">
           <div class="ticket-separator">==============================</div>
           <div class="ticket-date">Fecha: <span id="previewDate">--/--/----</span></div>
           <div class="ticket-time">Hora: <span id="previewTime">--:--:--</span></div>

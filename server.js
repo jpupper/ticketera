@@ -18,30 +18,54 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Archivo JSON para tracking de participantes
-const participantsFile = path.join(__dirname, 'participants.json');
+// Sistema de tracking de participantes con múltiples ticketeadoras
+const TICKETEADORAS = {
+  'default': {
+    name: 'Ticketeadora 1',
+    logo: 'logo.png',
+    file: 'participants.json'
+  },
+  'veladero': {
+    name: 'Veladero',
+    logo: 'veladerologo2.png',
+    file: 'participants_veladero.json'
+  }
+};
 
-// Inicializar archivo de participantes si no existe
-if (!fs.existsSync(participantsFile)) {
-  fs.writeFileSync(participantsFile, JSON.stringify({ lastNumber: 0, history: [] }, null, 2));
+function getParticipantsFile(ticketeadora = 'default') {
+  const config = TICKETEADORAS[ticketeadora] || TICKETEADORAS['default'];
+  return path.join(__dirname, config.file);
 }
 
-// Funciones para manejar participantes
-function getParticipantsData() {
+function getTicketeadoraConfig(ticketeadora = 'default') {
+  return TICKETEADORAS[ticketeadora] || TICKETEADORAS['default'];
+}
+
+function getParticipantsData(ticketeadora = 'default') {
+  const participantsFile = getParticipantsFile(ticketeadora);
+  if (!fs.existsSync(participantsFile)) {
+    return { lastNumber: 0, history: [] };
+  }
   try {
-    const data = fs.readFileSync(participantsFile, 'utf8');
+    const data = fs.readFileSync(participantsFile, 'utf-8');
     return JSON.parse(data);
-  } catch (e) {
+  } catch (err) {
+    console.error(`Error leyendo ${participantsFile}:`, err);
     return { lastNumber: 0, history: [] };
   }
 }
 
-function saveParticipantsData(data) {
-  fs.writeFileSync(participantsFile, JSON.stringify(data, null, 2));
+function saveParticipantsData(data, ticketeadora = 'default') {
+  const participantsFile = getParticipantsFile(ticketeadora);
+  try {
+    fs.writeFileSync(participantsFile, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error(`Error guardando ${participantsFile}:`, err);
+  }
 }
 
-function getNextParticipantNumber() {
-  const data = getParticipantsData();
+function getNextParticipantNumber(ticketeadora = 'default') {
+  const data = getParticipantsData(ticketeadora);
   data.lastNumber += 1;
   const now = new Date();
   const participantInfo = {
@@ -51,7 +75,7 @@ function getNextParticipantNumber() {
     timestamp: now.toISOString()
   };
   data.history.push(participantInfo);
-  saveParticipantsData(data);
+  saveParticipantsData(data, ticketeadora);
   return participantInfo;
 }
 
@@ -162,6 +186,22 @@ async function transformImageForThermal(imagePath) {
   }
 }
 
+// Endpoint para obtener lista de ticketeadoras
+app.options('/ticketeadoras', cors());
+app.get('/ticketeadoras', async (req, res) => {
+  try {
+    const ticketeadoras = Object.keys(TICKETEADORAS).map(key => ({
+      id: key,
+      name: TICKETEADORAS[key].name,
+      logo: TICKETEADORAS[key].logo
+    }));
+    return res.json({ ok: true, ticketeadoras });
+  } catch (err) {
+    console.error('Error obteniendo ticketeadoras:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Listar impresoras disponibles y la predeterminada
 // Preflight para /printers
 app.options('/printers', cors());
@@ -207,10 +247,13 @@ app.get('/printers', async (req, res) => {
 app.options('/print', cors());
 app.post('/print', async (req, res) => {
   try {
-    const selectedPrinter = (req.body.printer || '').trim();
-
+    const { printer, ticketeadora = 'default' } = req.body;
+    
+    // Obtener configuración de la ticketeadora
+    const config = getTicketeadoraConfig(ticketeadora);
+    
     // Obtener siguiente número de participante
-    const participant = getNextParticipantNumber();
+    const participant = getNextParticipantNumber(ticketeadora);
 
     // Preparar carpeta temporal para el PDF
     const tmpDir = path.join(__dirname, 'tmp');
@@ -236,8 +279,8 @@ app.post('/print', async (req, res) => {
     doc.fontSize(10).text('*  *  *  *  *  *  *  *  *  *', { align: 'center' });
     doc.moveDown(0.8);
 
-    // Logo centrado
-    const logoPath = path.join(__dirname, 'public', 'logo.png');
+    // Logo centrado (usar logo de la ticketeadora seleccionada)
+    const logoPath = path.join(__dirname, 'public', config.logo);
     if (fs.existsSync(logoPath)) {
       try {
         const imgBuffer = await transformImageForThermal(logoPath);
@@ -246,12 +289,17 @@ app.post('/print', async (req, res) => {
           const xPosition = doc.page.margins.left + (contentWidth - logoWidth) / 2;
           doc.image(imgBuffer, xPosition, doc.y, { width: logoWidth });
           doc.moveDown(8);
+        } else {
+          console.warn('No se pudo procesar logo:', logoPath);
+          doc.moveDown(2);
         }
       } catch (imgErr) {
-        console.warn('No se pudo insertar logo:', imgErr.message);
+        console.warn('Error procesando logo:', imgErr.message);
+        doc.moveDown(2);
       }
     } else {
       console.warn('Logo no encontrado en:', logoPath);
+      doc.moveDown(2);
     }
 
     // Fecha y hora
@@ -294,8 +342,8 @@ app.post('/print', async (req, res) => {
 
     // Validar impresora seleccionada si se proporcionó y enviar a la impresora
     const printOptions = {};
-    if (selectedPrinter) {
-      printOptions.printer = selectedPrinter;
+    if (printer) {
+      printOptions.printer = printer;
       if (typeof getPrinters === 'function') {
         try {
           const list = await getPrinters();
@@ -303,7 +351,7 @@ app.post('/print', async (req, res) => {
             ? list.map(resolvePrinterName).filter(Boolean)
             : [];
           const lower = names.map(n => n.toLowerCase());
-          if (!lower.includes(selectedPrinter.toLowerCase())) {
+          if (!lower.includes(printer.toLowerCase())) {
             return res.status(400).json({ ok: false, error: 'La impresora seleccionada no está disponible.' });
           }
         } catch (_) {
@@ -332,9 +380,10 @@ app.post('/print', async (req, res) => {
 app.options('/reset', cors());
 app.post('/reset', async (req, res) => {
   try {
-    const data = getParticipantsData();
+    const { ticketeadora = 'default' } = req.body;
+    const data = getParticipantsData(ticketeadora);
     data.lastNumber = 0;
-    saveParticipantsData(data);
+    saveParticipantsData(data, ticketeadora);
     return res.json({ ok: true, message: 'Contador reiniciado a 0' });
   } catch (err) {
     console.error('Error al reiniciar contador:', err);
@@ -346,7 +395,8 @@ app.post('/reset', async (req, res) => {
 app.options('/history', cors());
 app.get('/history', async (req, res) => {
   try {
-    const data = getParticipantsData();
+    const ticketeadora = req.query.ticketeadora || 'default';
+    const data = getParticipantsData(ticketeadora);
     return res.json({ 
       ok: true, 
       lastNumber: data.lastNumber,

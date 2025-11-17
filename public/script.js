@@ -1,4 +1,5 @@
    const statusEl = document.getElementById('status');
+const ticketeadoraSelect = document.getElementById('ticketeadora');
 const printerSelect = document.getElementById('printer');
 const printBtn = document.getElementById('printBtn');
 const resetBtn = document.getElementById('resetBtn');
@@ -6,10 +7,12 @@ const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
 const previewDate = document.getElementById('previewDate');
 const previewTime = document.getElementById('previewTime');
 const previewNumber = document.getElementById('previewNumber');
+const previewLogo = document.getElementById('previewLogo');
 const nextNumber = document.getElementById('nextNumber');
 const historyBody = document.getElementById('historyBody');
 const totalCount = document.getElementById('totalCount');
 let apiBase = window.location.origin;
+let ticketeadoras = {};
 
 function updatePreview() {
   const now = new Date();
@@ -35,10 +38,11 @@ async function generateTicket() {
   printBtn.disabled = true;
   try {
     const printer = printerSelect.value;
+    const ticketeadora = ticketeadoraSelect.value;
     const resp = await fetch(apiBase + '/print', { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ printer })
+      body: JSON.stringify({ printer, ticketeadora })
     });
     const data = await resp.json();
     if (!resp.ok || !data.ok) {
@@ -105,9 +109,11 @@ async function resetCounter() {
   statusEl.textContent = '';
   resetBtn.disabled = true;
   try {
+    const ticketeadora = ticketeadoraSelect.value;
     const resp = await fetch(apiBase + '/reset', { 
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketeadora })
     });
     const data = await resp.json();
     if (!resp.ok || !data.ok) {
@@ -129,10 +135,11 @@ async function resetCounter() {
 // Función para cargar el historial
 async function loadHistory() {
   try {
-    let resp = await fetch(apiBase + '/history');
+    const ticketeadora = ticketeadoraSelect.value;
+    let resp = await fetch(apiBase + '/history?ticketeadora=' + ticketeadora);
     let ct = resp.headers.get('content-type') || '';
     if (!ct.includes('application/json')) {
-      resp = await fetch('http://localhost:5450/history');
+      resp = await fetch('http://localhost:5450/history?ticketeadora=' + ticketeadora);
       ct = resp.headers.get('content-type') || '';
     }
     const data = await resp.json();
@@ -161,10 +168,42 @@ async function loadHistory() {
   }
 }
 
+// Función para cargar ticketeadoras
+async function loadTicketeadoras() {
+  try {
+    let resp = await fetch(apiBase + '/ticketeadoras');
+    let ct = resp.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      resp = await fetch('http://localhost:5450/ticketeadoras');
+      ct = resp.headers.get('content-type') || '';
+    }
+    const data = await resp.json();
+    if (data.ok && data.ticketeadoras) {
+      data.ticketeadoras.forEach(t => {
+        ticketeadoras[t.id] = t;
+      });
+    }
+  } catch (err) {
+    console.error('Error cargando ticketeadoras:', err);
+  }
+}
+
+// Función para cambiar ticketeadora
+function onTicketeadoraChange() {
+  const ticketeadora = ticketeadoraSelect.value;
+  const config = ticketeadoras[ticketeadora];
+  if (config) {
+    previewLogo.src = config.logo;
+  }
+  loadHistory();
+}
+
+ticketeadoraSelect.addEventListener('change', onTicketeadoraChange);
 resetBtn.addEventListener('click', resetCounter);
 refreshHistoryBtn.addEventListener('click', loadHistory);
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadTicketeadoras();
   loadPrinters();
   loadHistory();
 });
