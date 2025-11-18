@@ -305,7 +305,7 @@ app.post('/print', async (req, res) => {
             const logoWidth = Math.round(contentWidth * 0.90);
             const xPosition = doc.page.margins.left + (contentWidth - logoWidth) / 2;
             doc.image(imgBuffer, xPosition, doc.y, { width: logoWidth });
-            doc.moveDown(6);
+            doc.moveDown(10);
           }
         } catch (imgErr) {
           console.warn('Error procesando logo:', imgErr.message);
@@ -315,13 +315,34 @@ app.post('/print', async (req, res) => {
 
       // Texto "VIVI LA EXPERIENCIA" (pequeño)
       doc.font('Helvetica-Bold').fontSize(11).text('VIVI LA EXPERIENCIA', { align: 'center' });
-      doc.moveDown(0.8);
+      doc.moveDown(1.2);
 
-      // Texto principal "un futuro más brillante" (grande)
-      doc.font('Helvetica-Bold').fontSize(24).text('un futuro', { align: 'center' });
-      doc.fontSize(24).text('más', { align: 'center' });
-      doc.fontSize(24).text('brillante', { align: 'center' });
-      doc.moveDown(1.5);
+      // Imagen "un futuro más brillante"
+      const sloganPath = path.join(__dirname, 'public', 'futurobrillante.png');
+      if (fs.existsSync(sloganPath)) {
+        try {
+          const sloganBuffer = await transformImageForThermal(sloganPath);
+          if (sloganBuffer) {
+            const sloganWidth = Math.round(contentWidth * 0.85);
+            const xPositionSlogan = doc.page.margins.left + (contentWidth - sloganWidth) / 2;
+            doc.image(sloganBuffer, xPositionSlogan, doc.y, { width: sloganWidth });
+            doc.moveDown(8);
+          }
+        } catch (imgErr) {
+          console.warn('Error procesando imagen slogan:', imgErr.message);
+          // Fallback a texto si falla la imagen
+          doc.font('Helvetica-Bold').fontSize(24).text('un futuro', { align: 'center' });
+          doc.fontSize(24).text('más', { align: 'center' });
+          doc.fontSize(24).text('brillante', { align: 'center' });
+          doc.moveDown(1.5);
+        }
+      } else {
+        // Fallback a texto si no existe la imagen
+        doc.font('Helvetica-Bold').fontSize(24).text('un futuro', { align: 'center' });
+        doc.fontSize(24).text('más', { align: 'center' });
+        doc.fontSize(24).text('brillante', { align: 'center' });
+        doc.moveDown(1.5);
+      }
 
       // Separador ondulado
       doc.font('Helvetica').fontSize(10).text('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~', { align: 'center' });
